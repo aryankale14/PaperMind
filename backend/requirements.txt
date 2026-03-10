@@ -18,3 +18,4 @@ sqlalchemy[asyncio]
 psycopg2-binary
 pgvector
 google-cloud-storage
+groq
