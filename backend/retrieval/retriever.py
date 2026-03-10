@@ -2,9 +2,7 @@ from langchain_community.vectorstores import FAISS
 from ingestion.embedder import get_embedding_model
 from retrieval.scoring import section_score
 from retrieval.bm25_retriever import BM25Retriever
-from retrieval.reranker import rerank_documents
 from collections import defaultdict
-
 
 from database import get_conn
 
@@ -19,7 +17,6 @@ def search_pgvector(query, user_id, k=8):
 
     with get_conn() as conn:
         with conn.cursor() as cur:
-            # <=> is the cosine distance operator in pgvector
             cur.execute("""
                 SELECT content, paper_id, paper_title, page, 1 - (embedding <=> %s::vector) AS similarity
                 FROM document_embeddings
@@ -41,79 +38,44 @@ def search_pgvector(query, user_id, k=8):
                 
             return results
 
-
-# ----------------------------------------
-# Balance chunks across different papers
-# ----------------------------------------
 def balance_papers(docs, max_chunks_per_paper=2):
-
     paper_buckets = defaultdict(list)
-
     for doc in docs:
         paper = doc.metadata.get("paper_id", "unknown")
         paper_buckets[paper].append(doc)
 
     balanced = []
-
     for paper, chunks in paper_buckets.items():
         balanced.extend(chunks[:max_chunks_per_paper])
 
     return balanced
 
-
-# ----------------------------------------
-# Hybrid Retrieval
-# ----------------------------------------
 def retrieve_documents(query, k=5, user_id=None):
-
     bm25 = BM25Retriever(user_id=user_id)
-
-    # pgvector ANN search
     vec_results = search_pgvector(query, user_id, k=8)
-
-    # Keyword search
     bm25_results = bm25.search(query, k=8)
-
-    # Merge results
     combined = list({id(doc): doc for doc in vec_results + bm25_results}.values())
-
-    # ---------------------------------
-    # Paper balancing
-    # ---------------------------------
     combined = balance_papers(combined)
 
     # ---------------------------------
     # Cross-Encoder Reranking
+    # Disabled for Render Free Tier (OOM Issue)
     # ---------------------------------
-    combined = rerank_documents(query, combined)
+    # combined = rerank_documents(query, combined)
 
-    # ---------------------------------
-    # Section importance scoring
-    # ---------------------------------
     rescored = []
-
     for doc in combined:
-
         importance = section_score(doc.page_content)
-
         rescored.append((doc, importance))
 
     rescored.sort(key=lambda x: x[1], reverse=True)
-
     final_docs = [doc for doc, score in rescored[:k]]
 
     return final_docs
 
-
-# ----------------------------------------
-# Context Builder with Citation Grounding
-# ----------------------------------------
 def build_context(docs):
-
     context = ""
-
     for i, d in enumerate(docs):
-
         title = d.metadata.get("paper_title", "Unknown Paper")
         page = d.metadata.get("page", "?")
 
