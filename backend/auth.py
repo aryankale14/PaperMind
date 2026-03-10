@@ -4,24 +4,36 @@ Verifies Firebase ID tokens and extracts user info.
 """
 
 import os
+import json
 import firebase_admin
 from firebase_admin import credentials, auth as firebase_auth
 from fastapi import Request, HTTPException
 from database import upsert_user
 
 # ── Initialize Firebase Admin ────────────────────────────────
-_cred_path = os.path.join(
-    os.path.dirname(os.path.dirname(__file__)),
-    "firebase-service-account.json"
-)
-_cred = credentials.Certificate(_cred_path)
+firebase_cred_env = os.getenv("FIREBASE_CREDENTIALS")
 
 try:
-    firebase_admin.get_app()
-except ValueError:
-    firebase_admin.initialize_app(_cred, {
-        "storageBucket": "ai-research-copilot-511d7.firebasestorage.app"
-    })
+    if firebase_cred_env:
+        # Load from environment variable (Render)
+        cred_dict = json.loads(firebase_cred_env)
+        _cred = credentials.Certificate(cred_dict)
+    else:
+        # Load from local file (Local Development)
+        _cred_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            "firebase-service-account.json"
+        )
+        _cred = credentials.Certificate(_cred_path)
+
+    try:
+        firebase_admin.get_app()
+    except ValueError:
+        firebase_admin.initialize_app(_cred, {
+            "storageBucket": "ai-research-copilot-511d7.firebasestorage.app"
+        })
+except Exception as e:
+    print(f"Warning: Failed to initialize Firebase: {e}")
 
 
 async def get_current_user(request: Request) -> dict:
