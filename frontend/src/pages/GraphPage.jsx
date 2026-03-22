@@ -72,7 +72,7 @@ export default function GraphPage() {
         })
 
         // Reset zoom/pan when graph changes
-        setScale(window.innerWidth < 768 ? 0.4 : 1)
+        setScale(1)
         setOffset({ x: 0, y: 0 })
     }, [graph.nodes, dimensions])
 
@@ -156,8 +156,8 @@ export default function GraphPage() {
 
             canvas.width = width * window.devicePixelRatio
             canvas.height = height * window.devicePixelRatio
-            canvas.style.width = width + 'px'
-            canvas.style.height = height + 'px'
+            canvas.style.width = '100%'
+            canvas.style.height = '100%'
             ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0)
 
             ctx.clearRect(0, 0, width, height)
