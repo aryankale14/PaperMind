@@ -47,9 +47,9 @@ export default function LandingPage() {
 
             {/* ────── Navigation ────── */}
             <nav className="landing-nav">
-                <div className="landing-logo" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <img src="/logo.png" alt="PaperMind Logo" style={{ height: 35, width: 'auto', objectFit: 'contain' }} />
-                    <span className="logo-gradient" style={{ fontSize: '1.55rem', fontWeight: 800, letterSpacing: '-0.02em' }}>PaperMind</span>
+                <div className="landing-logo">
+                    <img src="/logo.png" alt="PaperMind Logo" className="landing-logo-img" />
+                    <span className="logo-gradient landing-logo-text">PaperMind</span>
                 </div>
                 <div className="landing-nav-links">
                     <a href="#features" className="landing-nav-link">Features</a>
