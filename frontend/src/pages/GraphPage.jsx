@@ -72,7 +72,7 @@ export default function GraphPage() {
         })
 
         // Reset zoom/pan when graph changes
-        setScale(1)
+        setScale(window.innerWidth < 768 ? 0.4 : 1)
         setOffset({ x: 0, y: 0 })
     }, [graph.nodes, dimensions])
 
@@ -100,6 +100,12 @@ export default function GraphPage() {
                     nodes[j].vx += fx
                     nodes[j].vy += fy
                 }
+            }
+
+            // Central gravity to prevent infinite expansion out of bounds
+            for (let i = 0; i < nodes.length; i++) {
+                nodes[i].vx += (cx - nodes[i].x) * 0.05
+                nodes[i].vy += (cy - nodes[i].y) * 0.05
             }
 
             // Attraction (edges) — longer ideal distance
