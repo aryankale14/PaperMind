@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { Menu, X, LogOut } from 'lucide-react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import Sidebar from './components/Sidebar'
 import ResearchPage from './pages/ResearchPage'
@@ -11,10 +12,11 @@ import LoginPage from './pages/LoginPage'
 import LandingPage from './pages/LandingPage'
 
 function ProtectedApp() {
-    const { user, loading, getToken } = useAuth()
+    const { user, loading, getToken, logout } = useAuth()
     const [result, setResult] = useState(null)
     const [history, setHistory] = useState([])
     const [activeHistoryIndex, setActiveHistoryIndex] = useState(null)
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
     // Load history from backend on login
     useEffect(() => {
@@ -64,11 +66,36 @@ function ProtectedApp() {
 
     return (
         <div className="app-layout">
-            <Sidebar
-                history={history}
-                activeHistoryIndex={activeHistoryIndex}
-                onHistoryClick={handleHistoryClick}
-            />
+            {/* Mobile Header */}
+            <div className="mobile-app-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <button className="mobile-icon-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+                        {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                    </button>
+                    <div className="mobile-brand">
+                        <img src="/logo.png" alt="PaperMind Logo" style={{ height: 24, width: 'auto' }} />
+                        <span className="logo-gradient" style={{ fontSize: '1.2rem', fontWeight: 800 }}>PaperMind</span>
+                    </div>
+                </div>
+                <button className="mobile-icon-btn" onClick={() => logout()} title="Sign out">
+                    <LogOut size={20} />
+                </button>
+            </div>
+
+            {/* Mobile Sidebar Overlay */}
+            {isMobileMenuOpen && (
+                <div className="mobile-sidebar-overlay" onClick={() => setIsMobileMenuOpen(false)} />
+            )}
+
+            <div className={`sidebar-container ${isMobileMenuOpen ? 'open' : ''}`}>
+                <Sidebar
+                    history={history}
+                    activeHistoryIndex={activeHistoryIndex}
+                    onHistoryClick={handleHistoryClick}
+                    onCloseMobile={() => setIsMobileMenuOpen(false)}
+                />
+            </div>
+
             <main className="main-content">
                 <Routes>
                     <Route path="/" element={
