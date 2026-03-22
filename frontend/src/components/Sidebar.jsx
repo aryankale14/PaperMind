@@ -26,7 +26,7 @@ export default function Sidebar({ history = [], activeHistoryIndex, onHistoryCli
 
     return (
         <aside className="sidebar">
-            <div className="sidebar-brand">
+            <div className="sidebar-brand" onClick={() => navigate('/')} style={{ cursor: 'pointer' }} title="Go to Landing Page">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '12px 0 12px 0' }}>
                     <img src="/logo.png" alt="PaperMind Logo" style={{ height: 28, width: 'auto', objectFit: 'contain' }} />
                     <span className="logo-gradient" style={{ fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.02em' }}>PaperMind</span>
