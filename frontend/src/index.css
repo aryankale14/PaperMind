@@ -536,6 +536,7 @@ body::before {
   font-size: 14.5px;
   line-height: 1.75;
   color: var(--text-primary);
+  overflow-wrap: break-word;
 }
 
 .answer-body h1,
@@ -659,6 +660,8 @@ body::before {
   font-size: 12px;
   color: var(--text-secondary);
   transition: all 0.2s ease;
+  word-break: break-all;
+  height: auto;
 }
 
 .source-chip:hover {
@@ -3216,8 +3219,18 @@ body::before {
     padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
   }
 
+  .research-input-wrapper {
+    padding: 4px 6px 4px 14px;
+  }
+
   .research-input-wrapper input {
     font-size: 16px; /* prevent auto-zoom on iOS */
+  }
+
+  .research-input-wrapper button {
+    padding: 10px 14px;
+    font-size: 13px;
+    flex-shrink: 0;
   }
   
   .answer-container {
@@ -3232,6 +3245,20 @@ body::before {
   
   .admin-page {
     padding: 20px 16px;
+  }
+  
+  .admin-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -16px;
+    padding: 0 16px;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  .admin-table {
+    min-width: 600px;
   }
   
   .admin-details-content {
