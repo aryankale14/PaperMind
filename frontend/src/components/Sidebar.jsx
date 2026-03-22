@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 
 const ADMIN_EMAIL = "aryankale1410@gmail.com"
 
-export default function Sidebar({ history = [], activeHistoryIndex, onHistoryClick }) {
+export default function Sidebar({ history = [], activeHistoryIndex, onHistoryClick, onCloseMobile }) {
     const [historySearch, setHistorySearch] = useState('')
     const { user, logout } = useAuth()
     const navigate = useNavigate()
@@ -17,6 +17,7 @@ export default function Sidebar({ history = [], activeHistoryIndex, onHistoryCli
     const handleEntryClick = (entry, realIndex) => {
         onHistoryClick(entry, realIndex)
         navigate('/app')
+        if (onCloseMobile) onCloseMobile()
     }
 
     const handleLogout = async () => {
@@ -35,25 +36,25 @@ export default function Sidebar({ history = [], activeHistoryIndex, onHistoryCli
             </div>
 
             <nav className="sidebar-nav">
-                <NavLink to="/app" end className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                <NavLink to="/app" end onClick={() => onCloseMobile && onCloseMobile()} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                     <Search />
                     Research
                 </NavLink>
-                <NavLink to="/app/papers" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                <NavLink to="/app/papers" onClick={() => onCloseMobile && onCloseMobile()} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                     <FileText />
                     Papers
                 </NavLink>
-                <NavLink to="/app/graph" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                <NavLink to="/app/graph" onClick={() => onCloseMobile && onCloseMobile()} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                     <Share2 />
                     Knowledge Graph
                 </NavLink>
-                <NavLink to="/app/memory" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                <NavLink to="/app/memory" onClick={() => onCloseMobile && onCloseMobile()} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                     <Brain />
                     Research Memory
                 </NavLink>
 
                 {user?.email === ADMIN_EMAIL && (
-                    <NavLink to="/app/admin" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} style={{ marginTop: '16px', color: 'var(--accent-primary)' }}>
+                    <NavLink to="/app/admin" onClick={() => onCloseMobile && onCloseMobile()} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} style={{ marginTop: '16px', color: 'var(--accent-primary)' }}>
                         <Shield />
                         Admin Dashboard
                     </NavLink>
