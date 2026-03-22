@@ -310,6 +310,27 @@ body::before {
 }
 
 /* ── Research Page ──────────────────────────────── */
+.welcome-hero-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 16px;
+  margin-top: 16px;
+}
+
+.welcome-hero-img {
+  height: 56px;
+  width: auto;
+  object-fit: contain;
+}
+
+.welcome-hero-title {
+  font-size: 3.5rem;
+  margin: 0;
+  font-weight: 800;
+}
+
 .research-page {
   display: flex;
   flex-direction: column;
@@ -1793,6 +1814,18 @@ body::before {
   gap: 12px;
 }
 
+.landing-logo-img {
+  height: 35px;
+  width: auto;
+  object-fit: contain;
+}
+
+.landing-logo-text {
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
 .landing-nav-links {
   display: flex;
   align-items: center;
@@ -2840,6 +2873,12 @@ body::before {
 
   .landing-hero-visual { margin-top: 40px; }
   .mockup-sidebar { display: none; }
+  
+  .landing-logo-img { height: 24px; }
+  .landing-logo-text { font-size: 1.3rem; }
+  .welcome-hero-logo { gap: 12px; margin-bottom: 12px; margin-top: 12px; flex-direction: column; }
+  .welcome-hero-img { height: 40px; }
+  .welcome-hero-title { font-size: 2.4rem; }
   
   .landing-feature-card, .landing-pipeline-step, .landing-audience-card {
     padding: 24px 20px;
