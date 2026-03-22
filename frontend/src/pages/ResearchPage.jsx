@@ -244,9 +244,9 @@ function WelcomeHero() {
     return (
         <div className="welcome-hero">
             <span className="hero-badge">Multi-Agent RAG System</span>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', marginBottom: '16px', marginTop: '16px' }}>
-                <img src="/logo.png" alt="PaperMind Logo" style={{ height: 56, width: 'auto', objectFit: 'contain' }} />
-                <h2 className="logo-gradient" style={{ fontSize: '3.5rem', margin: 0, fontWeight: 800 }}>PaperMind</h2>
+            <div className="welcome-hero-logo">
+                <img src="/logo.png" alt="PaperMind Logo" className="welcome-hero-img" />
+                <h2 className="logo-gradient welcome-hero-title">PaperMind</h2>
             </div>
             <p>
                 Ask complex research questions and get comprehensive, citation-grounded answers
