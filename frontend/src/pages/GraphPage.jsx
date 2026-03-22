@@ -58,14 +58,16 @@ export default function GraphPage() {
         const { width, height } = dimensions
         const cx = width / 2
         const cy = height / 2
+        const isMobile = width < 500
 
         nodesRef.current = graph.nodes.map((name, i) => {
             const angle = (2 * Math.PI * i) / graph.nodes.length
-            const radius = Math.min(width, height) * 0.38
+            const radius = Math.min(width, height) * (isMobile ? 0.28 : 0.38)
+            const jitter = isMobile ? 20 : 60
             return {
                 name,
-                x: cx + radius * Math.cos(angle) + (Math.random() - 0.5) * 60,
-                y: cy + radius * Math.sin(angle) + (Math.random() - 0.5) * 60,
+                x: cx + radius * Math.cos(angle) + (Math.random() - 0.5) * jitter,
+                y: cy + radius * Math.sin(angle) + (Math.random() - 0.5) * jitter,
                 vx: 0,
                 vy: 0,
             }
@@ -131,14 +133,16 @@ export default function GraphPage() {
                 node.vy += (cy - node.y) * 0.001
             }
 
-            // Apply velocity with damping
+            // Apply velocity with damping — use dynamic margins based on canvas size
+            const marginX = Math.min(100, width * 0.05)
+            const marginY = Math.min(60, height * 0.05)
             for (const node of nodes) {
                 node.vx *= 0.82
                 node.vy *= 0.82
                 node.x += node.vx
                 node.y += node.vy
-                node.x = Math.max(100, Math.min(width - 100, node.x))
-                node.y = Math.max(60, Math.min(height - 60, node.y))
+                node.x = Math.max(marginX, Math.min(width - marginX, node.x))
+                node.y = Math.max(marginY, Math.min(height - marginY, node.y))
             }
         }
     }, [graph, dimensions])
@@ -183,13 +187,17 @@ export default function GraphPage() {
                 // Edge label
                 const mx = (nodes[si].x + nodes[oi].x) / 2
                 const my = (nodes[si].y + nodes[oi].y) / 2
-                ctx.font = '10px Inter'
-                ctx.fillStyle = 'rgba(148, 163, 184, 0.5)'
-                ctx.textAlign = 'center'
-                ctx.fillText(edge.relation, mx, my - 6)
+                const isMobile = width < 500
+                if (!isMobile) {
+                    ctx.font = '10px Inter'
+                    ctx.fillStyle = 'rgba(148, 163, 184, 0.5)'
+                    ctx.textAlign = 'center'
+                    ctx.fillText(edge.relation, mx, my - 6)
+                }
             }
 
-            // Draw nodes
+            // Draw nodes — adapt sizes for mobile
+            const isMobile = width < 500
             for (let i = 0; i < nodes.length; i++) {
                 const node = nodes[i]
                 const isHovered = hoveredNode === i
@@ -197,22 +205,26 @@ export default function GraphPage() {
                 // Glow
                 if (isHovered) {
                     ctx.beginPath()
-                    ctx.arc(node.x, node.y, 22, 0, Math.PI * 2)
+                    ctx.arc(node.x, node.y, isMobile ? 16 : 22, 0, Math.PI * 2)
                     ctx.fillStyle = 'rgba(77, 148, 255, 0.12)'
                     ctx.fill()
                 }
 
-                // Node circle — bigger
+                // Node circle
+                const nodeRadius = isMobile ? (isHovered ? 6 : 4) : (isHovered ? 10 : 7)
                 ctx.beginPath()
-                ctx.arc(node.x, node.y, isHovered ? 10 : 7, 0, Math.PI * 2)
+                ctx.arc(node.x, node.y, nodeRadius, 0, Math.PI * 2)
                 ctx.fillStyle = isHovered ? '#6cb4ff' : '#4d94ff'
                 ctx.fill()
 
-                // Label
-                ctx.font = `${isHovered ? '13px' : '11px'} Inter`
+                // Label — smaller on mobile, truncate long names
+                const fontSize = isMobile ? (isHovered ? 8 : 7) : (isHovered ? 13 : 11)
+                ctx.font = `${fontSize}px Inter`
                 ctx.fillStyle = isHovered ? '#f0f2f5' : '#94a3b8'
                 ctx.textAlign = 'center'
-                ctx.fillText(node.name, node.x, node.y + (isHovered ? 24 : 22))
+                let label = node.name
+                if (isMobile && label.length > 18) label = label.substring(0, 16) + '…'
+                ctx.fillText(label, node.x, node.y + (isMobile ? 12 : (isHovered ? 24 : 22)))
             }
 
             ctx.restore()
@@ -333,12 +345,22 @@ export default function GraphPage() {
                 <div className="graph-container" ref={containerRef}>
                     <canvas
                         ref={canvasRef}
-                        style={{ display: 'block', cursor: dragRef.current.dragging ? 'grabbing' : hoveredNode !== null ? 'pointer' : 'grab' }}
+                        style={{ display: 'block', cursor: dragRef.current.dragging ? 'grabbing' : hoveredNode !== null ? 'pointer' : 'grab', touchAction: 'none' }}
                         onMouseMove={handleMouseMove}
                         onMouseDown={handleMouseDown}
                         onMouseUp={handleMouseUp}
                         onMouseLeave={handleMouseUp}
                         onWheel={handleWheel}
+                        onTouchStart={(e) => {
+                            const t = e.touches[0]
+                            dragRef.current = { dragging: true, startX: t.clientX, startY: t.clientY, startOffX: offset.x, startOffY: offset.y }
+                        }}
+                        onTouchMove={(e) => {
+                            if (!dragRef.current.dragging) return
+                            const t = e.touches[0]
+                            setOffset({ x: dragRef.current.startOffX + (t.clientX - dragRef.current.startX), y: dragRef.current.startOffY + (t.clientY - dragRef.current.startY) })
+                        }}
+                        onTouchEnd={() => { dragRef.current.dragging = false }}
                     />
                 </div>
             ) : (
