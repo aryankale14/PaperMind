@@ -999,6 +999,8 @@ body::before {
   border-radius: var(--radius-lg);
   overflow: hidden;
   height: calc(100vh - 200px);
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .graph-stats {
@@ -3221,16 +3223,36 @@ body::before {
 
   .research-input-wrapper {
     padding: 4px 6px 4px 14px;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .research-input-wrapper input {
     font-size: 16px; /* prevent auto-zoom on iOS */
+    min-width: 0;
   }
 
   .research-input-wrapper button {
-    padding: 10px 14px;
-    font-size: 13px;
+    padding: 10px 12px;
+    font-size: 0;
     flex-shrink: 0;
+    min-width: 40px;
+    justify-content: center;
+  }
+
+  .research-input-wrapper button svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .research-input-wrapper button .spinner {
+    width: 18px;
+    height: 18px;
+  }
+
+  .graph-container {
+    height: calc(100dvh - 300px);
+    min-height: 350px;
   }
   
   .answer-container {
@@ -3330,24 +3352,46 @@ body::before {
     padding: 0 16px 16px;
     margin-bottom: 16px;
     display: block;
+    overflow: hidden;
   }
 
   .admin-details-row td {
     display: block;
     padding: 0;
     border: none;
+    width: 100%;
+    overflow: hidden;
   }
 
   .admin-details-content {
     grid-template-columns: 1fr;
     padding: 16px 0 0 0;
     gap: 20px;
+    overflow: hidden;
   }
 
   .admin-details-content .admin-details-section {
     padding: 0;
     background: none;
     border: none;
+    overflow: hidden;
+  }
+
+  .admin-list li {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    max-width: 100%;
+  }
+
+  .admin-cell-main,
+  .admin-cell-muted {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    max-width: calc(100% - 40px);
+  }
+
+  .admin-row.expanded {
+    border-left: none;
   }
 
   .upload-zone {
