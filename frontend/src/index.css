@@ -2803,27 +2803,50 @@ body::before {
 
 /* ─── Mobile Responsive ─── */
 @media (max-width: 768px) {
+  .landing-nav { padding: 16px 20px; }
   .landing-nav-links { display: none; }
+  .landing-nav-actions .landing-btn-secondary { display: none; }
   
-  .landing-title { font-size: 2.5rem; }
+  .landing-title { font-size: 2.5rem; margin-bottom: 20px; }
+  .landing-subtitle { font-size: 1rem; margin-bottom: 30px; }
 
   .landing-hero {
-    margin: 50px auto 0;
-    padding-bottom: 50px;
+    margin: 40px auto 0;
+    padding: 0 20px 50px;
+  }
+  
+  .landing-hero-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 12px;
+  }
+  
+  .landing-hero-actions button, 
+  .landing-hero-actions a {
+    width: 100%;
+    justify-content: center;
   }
 
-  .landing-features-container { padding: 60px 20px; }
+  .landing-features-container { padding: 50px 20px; }
 
-  .landing-features-title { font-size: 1.8rem; margin-bottom: 40px; }
+  .landing-features-title { font-size: 1.8rem; margin-bottom: 30px; }
 
   .landing-stats-grid { gap: 24px; }
   .landing-stat-divider { display: none; }
   .landing-stat-number { font-size: 2rem; }
 
-  .landing-cta-inner { padding: 48px 24px; }
+  .landing-cta-inner { padding: 40px 20px; }
   .landing-cta-title { font-size: 1.6rem; }
 
   .landing-hero-visual { margin-top: 40px; }
+  .mockup-sidebar { display: none; }
+  
+  .landing-feature-card, .landing-pipeline-step, .landing-audience-card {
+    padding: 24px 20px;
+  }
+  
+  .landing-contact-card { padding: 24px 20px; }
+  .landing-feedback-info-title { font-size: 1.4rem; }
 }
 
 /* ─── Animations ─── */
@@ -2917,6 +2940,7 @@ body::before {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  overflow-x: auto;
 }
 
 .admin-table {
@@ -3043,4 +3067,124 @@ body::before {
 .query-date {
   font-size: 0.75rem;
   color: var(--text-muted);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Mobile Responsive Layout (Dashboard Pages)
+   ═══════════════════════════════════════════════════════════ */
+.mobile-app-header {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* Layout Adjustments */
+  .app-layout {
+    flex-direction: column;
+  }
+  
+  .mobile-app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: rgba(8, 8, 8, 0.9);
+    backdrop-filter: var(--glass-blur);
+    border-bottom: 1px solid var(--border-subtle);
+    z-index: 50;
+  }
+  
+  .mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .mobile-icon-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s;
+  }
+  
+  .mobile-icon-btn:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  /* Sliding Off-Canvas Sidebar */
+  .sidebar-container {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    height: 100vh;
+    z-index: 1000;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .sidebar-container.open {
+    left: 0;
+  }
+  
+  .mobile-sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 999;
+  }
+
+  /* Content Padding Fixes */
+  .page-container {
+    padding: 20px 16px;
+  }
+  
+  .page-header {
+    margin-bottom: 24px;
+  }
+  
+  .page-header h2 {
+    font-size: 20px;
+  }
+  
+  .research-results {
+    padding: 24px 16px 16px;
+  }
+  
+  .research-input-bar {
+    padding: 12px 16px 20px;
+  }
+
+  .research-input-wrapper input {
+    font-size: 16px; /* prevent auto-zoom on iOS */
+  }
+  
+  .answer-container {
+    padding: 20px 16px;
+  }
+  
+  /* Grid Breakdowns */
+  .papers-grid, .admin-metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .admin-page {
+    padding: 20px 16px;
+  }
+  
+  .admin-details-content {
+    grid-template-columns: 1fr;
+    padding: 20px 16px 24px 16px;
+    gap: 24px;
+  }
+
+  .upload-zone {
+    padding: 24px 16px;
+  }
 }
