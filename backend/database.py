@@ -258,7 +258,10 @@ def add_document_chunks(user_id, paper_id, paper_title, chunks, embeddings):
         with conn.cursor() as cur:
             for chunk in chunks:
                 page = chunk.metadata.get("page", 0)
-                content = chunk.page_content
+                # Strip NUL bytes — PostgreSQL text columns reject \x00
+                content = chunk.page_content.replace("\x00", "")
+                if not content.strip():
+                    continue  # skip empty chunks
                 # Get the embedding vector for this chunk
                 vector = embeddings.embed_query(content)
                 
