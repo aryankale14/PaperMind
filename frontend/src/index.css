@@ -998,7 +998,8 @@ body::before {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  height: calc(100vh - 200px);
+  height: calc(100vh - 280px);
+  min-height: 550px;
   max-width: 100%;
   box-sizing: border-box;
 }
