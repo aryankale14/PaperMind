@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Share2, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -11,12 +11,24 @@ export default function GraphPage() {
     const nodesRef = useRef([])
     const [hoveredNode, setHoveredNode] = useState(null)
     const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
+    const tickRef = useRef(0)
 
     // Zoom & pan state
     const [scale, setScale] = useState(1)
     const [offset, setOffset] = useState({ x: 0, y: 0 })
     const dragRef = useRef({ dragging: false, startX: 0, startY: 0, startOffX: 0, startOffY: 0 })
     const { getToken } = useAuth()
+
+    // Precompute connection counts for node sizing
+    const connectionCounts = useMemo(() => {
+        const counts = {}
+        for (const node of graph.nodes) counts[node] = 0
+        for (const edge of graph.edges) {
+            if (counts[edge.subject] !== undefined) counts[edge.subject]++
+            if (counts[edge.object] !== undefined) counts[edge.object]++
+        }
+        return counts
+    }, [graph])
 
     useEffect(() => {
         const fetchGraph = async () => {
@@ -52,7 +64,7 @@ export default function GraphPage() {
         return () => observer.disconnect()
     }, [])
 
-    // Initialize node positions — spread out more
+    // Initialize node positions — spread out in a large circle
     useEffect(() => {
         if (graph.nodes.length === 0) return
         const { width, height } = dimensions
@@ -62,8 +74,8 @@ export default function GraphPage() {
 
         nodesRef.current = graph.nodes.map((name, i) => {
             const angle = (2 * Math.PI * i) / graph.nodes.length
-            const radius = Math.min(width, height) * (isMobile ? 0.28 : 0.38)
-            const jitter = isMobile ? 20 : 60
+            const radius = Math.min(width, height) * (isMobile ? 0.32 : 0.42)
+            const jitter = isMobile ? 30 : 90
             return {
                 name,
                 x: cx + radius * Math.cos(angle) + (Math.random() - 0.5) * jitter,
@@ -73,28 +85,34 @@ export default function GraphPage() {
             }
         })
 
-        // Reset zoom/pan when graph changes
+        tickRef.current = 0
         setScale(1)
         setOffset({ x: 0, y: 0 })
     }, [graph.nodes, dimensions])
 
-    // Improved force-directed simulation — more spacing
+    // Improved force-directed simulation
     const simulate = useCallback(() => {
         const nodes = nodesRef.current
         if (nodes.length === 0) return
+
+        tickRef.current++
 
         const { width, height } = dimensions
         const cx = width / 2
         const cy = height / 2
 
+        // Cooling: slow down forces over time for a stable layout
+        const cooling = Math.max(0.15, 1 - tickRef.current * 0.003)
+
         for (let iter = 0; iter < 3; iter++) {
-            // Stronger repulsion for less congestion
+            // Strong repulsion between ALL node pairs
             for (let i = 0; i < nodes.length; i++) {
                 for (let j = i + 1; j < nodes.length; j++) {
                     let dx = nodes[j].x - nodes[i].x
                     let dy = nodes[j].y - nodes[i].y
                     let dist = Math.sqrt(dx * dx + dy * dy) || 1
-                    let force = 3000 / (dist * dist)
+                    // Much stronger repulsion to prevent clustering
+                    let force = (8000 * cooling) / (dist * dist)
                     let fx = (dx / dist) * force
                     let fy = (dy / dist) * force
                     nodes[i].vx -= fx
@@ -104,13 +122,13 @@ export default function GraphPage() {
                 }
             }
 
-            // Central gravity to prevent infinite expansion out of bounds
+            // Very gentle central gravity (just enough to keep them on screen)
             for (let i = 0; i < nodes.length; i++) {
-                nodes[i].vx += (cx - nodes[i].x) * 0.05
-                nodes[i].vy += (cy - nodes[i].y) * 0.05
+                nodes[i].vx += (cx - nodes[i].x) * 0.008 * cooling
+                nodes[i].vy += (cy - nodes[i].y) * 0.008 * cooling
             }
 
-            // Attraction (edges) — longer ideal distance
+            // Attraction along edges — connected nodes pull toward each other
             for (const edge of graph.edges) {
                 const si = graph.nodes.indexOf(edge.subject)
                 const oi = graph.nodes.indexOf(edge.object)
@@ -118,7 +136,7 @@ export default function GraphPage() {
                 let dx = nodes[oi].x - nodes[si].x
                 let dy = nodes[oi].y - nodes[si].y
                 let dist = Math.sqrt(dx * dx + dy * dy) || 1
-                let force = (dist - 200) * 0.008
+                let force = (dist - 220) * 0.006 * cooling
                 let fx = (dx / dist) * force
                 let fy = (dy / dist) * force
                 nodes[si].vx += fx
@@ -127,18 +145,12 @@ export default function GraphPage() {
                 nodes[oi].vy -= fy
             }
 
-            // Center gravity
+            // Apply velocity with damping
+            const marginX = Math.min(80, width * 0.08)
+            const marginY = Math.min(60, height * 0.08)
             for (const node of nodes) {
-                node.vx += (cx - node.x) * 0.001
-                node.vy += (cy - node.y) * 0.001
-            }
-
-            // Apply velocity with damping — use dynamic margins based on canvas size
-            const marginX = Math.min(100, width * 0.05)
-            const marginY = Math.min(60, height * 0.05)
-            for (const node of nodes) {
-                node.vx *= 0.82
-                node.vy *= 0.82
+                node.vx *= 0.85
+                node.vy *= 0.85
                 node.x += node.vx
                 node.y += node.vy
                 node.x = Math.max(marginX, Math.min(width - marginX, node.x))
@@ -157,6 +169,8 @@ export default function GraphPage() {
             simulate()
             const nodes = nodesRef.current
             const { width, height } = dimensions
+            const isMobile = width < 500
+            const time = Date.now() * 0.001 // for subtle animations
 
             canvas.width = width * window.devicePixelRatio
             canvas.height = height * window.devicePixelRatio
@@ -171,60 +185,203 @@ export default function GraphPage() {
             ctx.translate(offset.x, offset.y)
             ctx.scale(scale, scale)
 
-            // Draw edges
-            for (const edge of graph.edges) {
-                const si = graph.nodes.indexOf(edge.subject)
-                const oi = graph.nodes.indexOf(edge.object)
-                if (si < 0 || oi < 0 || !nodes[si] || !nodes[oi]) continue
-
-                ctx.beginPath()
-                ctx.moveTo(nodes[si].x, nodes[si].y)
-                ctx.lineTo(nodes[oi].x, nodes[oi].y)
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)'
-                ctx.lineWidth = 1
-                ctx.stroke()
-
-                // Edge label
-                const mx = (nodes[si].x + nodes[oi].x) / 2
-                const my = (nodes[si].y + nodes[oi].y) / 2
-                const isMobile = width < 500
-                if (!isMobile) {
-                    ctx.font = '10px Inter'
-                    ctx.fillStyle = 'rgba(148, 163, 184, 0.5)'
-                    ctx.textAlign = 'center'
-                    ctx.fillText(edge.relation, mx, my - 6)
-                }
+            // Build a set of hovered-related edges + neighbor indices
+            const hoveredEdges = new Set()
+            const neighborIndices = new Set()
+            if (hoveredNode !== null) {
+                neighborIndices.add(hoveredNode)
+                const hoveredName = graph.nodes[hoveredNode]
+                graph.edges.forEach((edge, idx) => {
+                    if (edge.subject === hoveredName || edge.object === hoveredName) {
+                        hoveredEdges.add(idx)
+                        neighborIndices.add(graph.nodes.indexOf(edge.subject))
+                        neighborIndices.add(graph.nodes.indexOf(edge.object))
+                    }
+                })
             }
 
-            // Draw nodes — adapt sizes for mobile
-            const isMobile = width < 500
+            // ──── Draw Edges ────
+            graph.edges.forEach((edge, edgeIdx) => {
+                const si = graph.nodes.indexOf(edge.subject)
+                const oi = graph.nodes.indexOf(edge.object)
+                if (si < 0 || oi < 0 || !nodes[si] || !nodes[oi]) return
+
+                const isHighlighted = hoveredEdges.has(edgeIdx)
+                const isDimmed = hoveredNode !== null && !isHighlighted
+
+                // Curved edge using quadratic bezier
+                const sx = nodes[si].x, sy = nodes[si].y
+                const ex = nodes[oi].x, ey = nodes[oi].y
+                const mx = (sx + ex) / 2
+                const my = (sy + ey) / 2
+                // offset control point perpendicular to the line
+                const dx = ex - sx, dy = ey - sy
+                const len = Math.sqrt(dx * dx + dy * dy) || 1
+                const curvature = Math.min(30, len * 0.12)
+                const cpx = mx + (-dy / len) * curvature
+                const cpy = my + (dx / len) * curvature
+
+                ctx.beginPath()
+                ctx.moveTo(sx, sy)
+                ctx.quadraticCurveTo(cpx, cpy, ex, ey)
+
+                if (isHighlighted) {
+                    ctx.strokeStyle = 'rgba(120, 180, 255, 0.7)'
+                    ctx.lineWidth = 2.5
+                    ctx.shadowColor = 'rgba(100, 160, 255, 0.4)'
+                    ctx.shadowBlur = 8
+                } else if (isDimmed) {
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)'
+                    ctx.lineWidth = 0.8
+                    ctx.shadowBlur = 0
+                } else {
+                    ctx.strokeStyle = 'rgba(100, 160, 255, 0.15)'
+                    ctx.lineWidth = 1.2
+                    ctx.shadowBlur = 0
+                }
+                ctx.stroke()
+                ctx.shadowBlur = 0
+
+                // Edge label (only on desktop, only for highlighted or default)
+                if (!isMobile && !isDimmed) {
+                    const labelX = cpx
+                    const labelY = cpy
+                    const label = edge.relation
+                    ctx.font = '10px Inter, sans-serif'
+                    const textWidth = ctx.measureText(label).width
+
+                    // Dark pill background behind label
+                    const px = 5, py = 3
+                    ctx.fillStyle = isHighlighted ? 'rgba(30, 40, 65, 0.9)' : 'rgba(15, 20, 35, 0.75)'
+                    ctx.beginPath()
+                    const rx = labelX - textWidth / 2 - px
+                    const ry = labelY - 6 - py
+                    const rw = textWidth + px * 2
+                    const rh = 12 + py * 2
+                    const cornerR = 4
+                    ctx.moveTo(rx + cornerR, ry)
+                    ctx.lineTo(rx + rw - cornerR, ry)
+                    ctx.quadraticCurveTo(rx + rw, ry, rx + rw, ry + cornerR)
+                    ctx.lineTo(rx + rw, ry + rh - cornerR)
+                    ctx.quadraticCurveTo(rx + rw, ry + rh, rx + rw - cornerR, ry + rh)
+                    ctx.lineTo(rx + cornerR, ry + rh)
+                    ctx.quadraticCurveTo(rx, ry + rh, rx, ry + rh - cornerR)
+                    ctx.lineTo(rx, ry + cornerR)
+                    ctx.quadraticCurveTo(rx, ry, rx + cornerR, ry)
+                    ctx.fill()
+
+                    ctx.fillStyle = isHighlighted ? 'rgba(180, 210, 255, 0.95)' : 'rgba(148, 163, 184, 0.65)'
+                    ctx.textAlign = 'center'
+                    ctx.textBaseline = 'middle'
+                    ctx.fillText(label, labelX, labelY)
+                }
+            })
+
+            // ──── Draw Nodes ────
             for (let i = 0; i < nodes.length; i++) {
                 const node = nodes[i]
                 const isHovered = hoveredNode === i
+                const isNeighbor = neighborIndices.has(i)
+                const isDimmed = hoveredNode !== null && !isNeighbor
 
-                // Glow
-                if (isHovered) {
+                // Connection-based sizing: more connections = larger node
+                const connections = connectionCounts[node.name] || 0
+                const sizeMultiplier = 1 + Math.min(connections * 0.15, 0.8)
+                const baseRadius = isMobile ? 4 : 6
+                let nodeRadius = baseRadius * sizeMultiplier
+
+                if (isHovered) nodeRadius = isMobile ? 9 : 14
+                else if (isNeighbor && hoveredNode !== null) nodeRadius = isMobile ? 6 : 10
+
+                // Outer glow ring (breathing animation)
+                const breathe = 0.7 + 0.3 * Math.sin(time * 1.5 + i * 0.5)
+                if (!isDimmed) {
+                    const glowRadius = nodeRadius * (isHovered ? 3.2 : 2.2) * breathe
+                    const gradient = ctx.createRadialGradient(node.x, node.y, nodeRadius * 0.5, node.x, node.y, glowRadius)
+                    if (isHovered) {
+                        gradient.addColorStop(0, 'rgba(100, 180, 255, 0.25)')
+                        gradient.addColorStop(1, 'rgba(100, 180, 255, 0)')
+                    } else {
+                        gradient.addColorStop(0, 'rgba(80, 140, 255, 0.08)')
+                        gradient.addColorStop(1, 'rgba(80, 140, 255, 0)')
+                    }
                     ctx.beginPath()
-                    ctx.arc(node.x, node.y, isMobile ? 16 : 22, 0, Math.PI * 2)
-                    ctx.fillStyle = 'rgba(77, 148, 255, 0.12)'
+                    ctx.arc(node.x, node.y, glowRadius, 0, Math.PI * 2)
+                    ctx.fillStyle = gradient
                     ctx.fill()
                 }
 
-                // Node circle
-                const nodeRadius = isMobile ? (isHovered ? 6 : 4) : (isHovered ? 10 : 7)
+                // Node circle with gradient fill
+                const nodeGrad = ctx.createRadialGradient(
+                    node.x - nodeRadius * 0.3, node.y - nodeRadius * 0.3, nodeRadius * 0.1,
+                    node.x, node.y, nodeRadius
+                )
+                if (isDimmed) {
+                    nodeGrad.addColorStop(0, 'rgba(80, 110, 160, 0.4)')
+                    nodeGrad.addColorStop(1, 'rgba(50, 70, 120, 0.3)')
+                } else if (isHovered) {
+                    nodeGrad.addColorStop(0, '#8cc8ff')
+                    nodeGrad.addColorStop(1, '#4d94ff')
+                } else if (isNeighbor && hoveredNode !== null) {
+                    nodeGrad.addColorStop(0, '#7ab8ff')
+                    nodeGrad.addColorStop(1, '#4080e0')
+                } else {
+                    nodeGrad.addColorStop(0, '#6aadff')
+                    nodeGrad.addColorStop(1, '#3d7ee6')
+                }
+
                 ctx.beginPath()
                 ctx.arc(node.x, node.y, nodeRadius, 0, Math.PI * 2)
-                ctx.fillStyle = isHovered ? '#6cb4ff' : '#4d94ff'
+                ctx.fillStyle = nodeGrad
                 ctx.fill()
 
-                // Label — smaller on mobile, truncate long names
-                const fontSize = isMobile ? (isHovered ? 8 : 7) : (isHovered ? 13 : 11)
-                ctx.font = `${fontSize}px Inter`
-                ctx.fillStyle = isHovered ? '#f0f2f5' : '#94a3b8'
-                ctx.textAlign = 'center'
-                let label = node.name
-                if (isMobile && label.length > 18) label = label.substring(0, 16) + '…'
-                ctx.fillText(label, node.x, node.y + (isMobile ? 12 : (isHovered ? 24 : 22)))
+                // Bright ring on hovered/neighbor
+                if (isHovered || (isNeighbor && hoveredNode !== null)) {
+                    ctx.beginPath()
+                    ctx.arc(node.x, node.y, nodeRadius + 1.5, 0, Math.PI * 2)
+                    ctx.strokeStyle = isHovered ? 'rgba(140, 200, 255, 0.8)' : 'rgba(100, 160, 255, 0.4)'
+                    ctx.lineWidth = isHovered ? 2 : 1
+                    ctx.stroke()
+                }
+
+                // Label with dark background pill
+                if (!isDimmed || isHovered) {
+                    let label = node.name
+                    if (isMobile && label.length > 16) label = label.substring(0, 14) + '…'
+                    else if (!isMobile && label.length > 28) label = label.substring(0, 26) + '…'
+
+                    const fontSize = isMobile
+                        ? (isHovered ? 10 : 8)
+                        : (isHovered ? 13 : 11)
+                    ctx.font = `${isHovered ? '600' : '400'} ${fontSize}px Inter, sans-serif`
+                    const textWidth = ctx.measureText(label).width
+                    const labelY = node.y + nodeRadius + (isMobile ? 10 : 16)
+
+                    // Dark background pill
+                    const px = 6, py = 3
+                    ctx.fillStyle = isHovered ? 'rgba(20, 30, 50, 0.9)' : 'rgba(10, 15, 30, 0.7)'
+                    const pillX = node.x - textWidth / 2 - px
+                    const pillY = labelY - fontSize / 2 - py
+                    const pillW = textWidth + px * 2
+                    const pillH = fontSize + py * 2
+                    const cr = 4
+                    ctx.beginPath()
+                    ctx.moveTo(pillX + cr, pillY)
+                    ctx.lineTo(pillX + pillW - cr, pillY)
+                    ctx.quadraticCurveTo(pillX + pillW, pillY, pillX + pillW, pillY + cr)
+                    ctx.lineTo(pillX + pillW, pillY + pillH - cr)
+                    ctx.quadraticCurveTo(pillX + pillW, pillY + pillH, pillX + pillW - cr, pillY + pillH)
+                    ctx.lineTo(pillX + cr, pillY + pillH)
+                    ctx.quadraticCurveTo(pillX, pillY + pillH, pillX, pillY + pillH - cr)
+                    ctx.lineTo(pillX, pillY + cr)
+                    ctx.quadraticCurveTo(pillX, pillY, pillX + cr, pillY)
+                    ctx.fill()
+
+                    ctx.fillStyle = isHovered ? '#f0f4ff' : (isDimmed ? 'rgba(148, 163, 184, 0.4)' : 'rgba(190, 205, 225, 0.85)')
+                    ctx.textAlign = 'center'
+                    ctx.textBaseline = 'middle'
+                    ctx.fillText(label, node.x, labelY)
+                }
             }
 
             ctx.restore()
@@ -236,7 +393,7 @@ export default function GraphPage() {
         return () => {
             if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
         }
-    }, [graph, dimensions, hoveredNode, simulate, scale, offset])
+    }, [graph, dimensions, hoveredNode, simulate, scale, offset, connectionCounts])
 
     // Mouse interaction with zoom/pan awareness
     const handleMouseMove = useCallback((e) => {
@@ -261,7 +418,7 @@ export default function GraphPage() {
         for (let i = 0; i < nodes.length; i++) {
             const dx = nodes[i].x - mx
             const dy = nodes[i].y - my
-            if (Math.sqrt(dx * dx + dy * dy) < 24) {
+            if (Math.sqrt(dx * dx + dy * dy) < 28) {
                 found = i
                 break
             }
