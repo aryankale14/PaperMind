@@ -170,16 +170,18 @@ async def upload_paper(
             loader = PyPDFLoader(tmp_path)
             documents = loader.load()
             
-            # inject metadata
+            # Strip NUL bytes from extracted text — PostgreSQL rejects \x00
+            safe_filename = filename.replace("\x00", "")
             for doc in documents:
-                doc.metadata["paper_title"] = filename
-                doc.metadata["paper_id"] = filename
+                doc.page_content = doc.page_content.replace("\x00", "")
+                doc.metadata["paper_title"] = safe_filename
+                doc.metadata["paper_id"] = safe_filename
 
             chunks = chunk_documents(documents)
             embeddings = get_embedding_model()
             
             # insert into pgvector postgres DB instead of FAISS
-            add_document_chunks(uid, filename, filename, chunks, embeddings)
+            add_document_chunks(uid, safe_filename, safe_filename, chunks, embeddings)
         finally:
             os.unlink(tmp_path)
 
