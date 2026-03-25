@@ -216,7 +216,7 @@ export default function PapersPage() {
                         <p>This action is <strong>permanent</strong> and cannot be undone. The following data will be completely erased:</p>
                         <ul className="warning-list">
                             <li>All uploaded research papers (PDFs)</li>
-                            <li>FAISS vector embeddings index</li>
+                            <li>Vector embeddings index</li>
                             <li>Entire research memory bank</li>
                             <li>Knowledge graph (nodes & relationships)</li>
                             <li>Research history log</li>
