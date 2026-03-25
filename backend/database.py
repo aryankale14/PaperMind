@@ -2,6 +2,7 @@
 PostgreSQL Database Module
 Handles connection pooling and schema initialization for multi-tenant data.
 """
+import re
 
 import os
 import psycopg2
@@ -251,16 +252,30 @@ def add_graph_triplet(user_id, subject, relation, obj):
             """, (user_id, subject, relation, obj))
 
 
+# ── Helpers ───────────────────────────────────────────────────
+def _sanitize_for_pg(text):
+    """Remove ALL NUL (0x00) and other problematic characters for PostgreSQL."""
+    if not isinstance(text, str):
+        return text
+    # Remove NUL bytes (the main offender)
+    text = text.replace("\x00", "")
+    # Also strip any other ASCII control chars except newline/tab/carriage-return
+    text = re.sub(r'[\x01-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+    return text
+
+
 # ── Document Operations (pgvector) ───────────────────────────
 def add_document_chunks(user_id, paper_id, paper_title, chunks, embeddings):
     """Insert text chunks and their pgvector embeddings into PostgreSQL."""
+    safe_paper_id = _sanitize_for_pg(paper_id)
+    safe_paper_title = _sanitize_for_pg(paper_title)
+    
     with get_conn() as conn:
         with conn.cursor() as cur:
             for chunk in chunks:
                 page = chunk.metadata.get("page", 0)
-                # Strip NUL bytes — PostgreSQL text columns reject \x00
-                content = chunk.page_content.replace("\x00", "")
-                if not content.strip():
+                content = _sanitize_for_pg(chunk.page_content)
+                if not content or not content.strip():
                     continue  # skip empty chunks
                 # Get the embedding vector for this chunk
                 vector = embeddings.embed_query(content)
@@ -268,7 +283,7 @@ def add_document_chunks(user_id, paper_id, paper_title, chunks, embeddings):
                 cur.execute("""
                     INSERT INTO document_embeddings (user_id, paper_id, paper_title, page, content, embedding)
                     VALUES (%s, %s, %s, %s, %s, %s)
-                """, (user_id, paper_id, paper_title, page, content, vector))
+                """, (user_id, safe_paper_id, safe_paper_title, page, content, vector))
 
 
 def get_user_papers(user_id):
