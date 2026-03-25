@@ -28,51 +28,69 @@ export default function PapersPage() {
 
     useEffect(() => { fetchPapers() }, [fetchPapers])
 
-    const handleUpload = async (file) => {
-        if (!file || !file.name.toLowerCase().endsWith('.pdf')) {
-            setUploadMsg('Only PDF files are supported')
+    const handleUploadFiles = async (files) => {
+        const validFiles = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.pdf'));
+        if (validFiles.length === 0) {
+            setUploadMsg('No valid PDF files selected.')
             return
         }
+        
         setUploading(true)
-        setUploadMsg(`Uploading ${file.name}...`)
+        let successCount = 0;
+        let failCount = 0;
+        
+        for (let i = 0; i < validFiles.length; i++) {
+            const file = validFiles[i];
+            setUploadMsg(`Uploading ${i + 1}/${validFiles.length}: ${file.name}...`)
 
-        const formData = new FormData()
-        formData.append('file', file)
+            const formData = new FormData()
+            formData.append('file', file)
 
-        try {
-            const token = await getToken()
-            const API_BASE_URL = import.meta.env.VITE_API_URL || '';
-            const res = await fetch(`${API_BASE_URL}/api/upload`, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${token}` },
-                body: formData,
-            })
-            const data = await res.json()
+            try {
+                const token = await getToken()
+                const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+                const res = await fetch(`${API_BASE_URL}/api/upload`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` },
+                    body: formData,
+                })
+                const data = await res.json()
 
-            if (data.status === 'uploaded_and_indexed') {
-                setUploadMsg(`✅ ${file.name} uploaded and indexed successfully!`)
-            } else {
-                setUploadMsg(`⚠️ Uploaded but indexing had an issue: ${data.index_error || 'unknown'}`)
+                if (data.status === 'uploaded_and_indexed') {
+                    successCount++;
+                } else {
+                    console.error(`Error uploading ${file.name}:`, data.index_error);
+                    failCount++;
+                }
+                fetchPapers() // fetch on each success/failure to keep UI fresh
+            } catch (err) {
+                console.error(`Upload failed for ${file.name}:`, err.message);
+                failCount++;
             }
-            fetchPapers()
-        } catch (err) {
-            setUploadMsg(`❌ Upload failed: ${err.message}`)
-        } finally {
-            setUploading(false)
-            setTimeout(() => setUploadMsg(''), 5000)
         }
+        
+        if (failCount === 0) {
+            setUploadMsg(`✅ Selected ${validFiles.length} file(s) uploaded and indexed successfully!`);
+        } else {
+            setUploadMsg(`⚠️ Finished: ${successCount} successful, ${failCount} failed.`);
+        }
+        
+        setUploading(false)
+        setTimeout(() => setUploadMsg(''), 5000)
     }
 
     const handleDrop = (e) => {
         e.preventDefault()
         setDragover(false)
-        const file = e.dataTransfer.files[0]
-        if (file) handleUpload(file)
+        const files = e.dataTransfer.files
+        if (files && files.length > 0) handleUploadFiles(files)
     }
 
     const handleFileInput = (e) => {
-        const file = e.target.files[0]
-        if (file) handleUpload(file)
+        const files = e.target.files
+        if (files && files.length > 0) handleUploadFiles(files)
+        // Reset the input value so the exact same files can be re-selected if needed
+        e.target.value = null;
     }
 
     const handleReset = async () => {
@@ -143,6 +161,7 @@ export default function PapersPage() {
                     id="file-upload-input"
                     type="file"
                     accept=".pdf"
+                    multiple
                     style={{ display: 'none' }}
                     onChange={handleFileInput}
                     disabled={uploading}
