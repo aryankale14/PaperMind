@@ -3,6 +3,10 @@ import re
 
 
 def clean_scientific_text(text: str) -> str:
+    # Strip NUL bytes and problematic control characters first
+    text = text.replace("\x00", "")
+    text = re.sub(r'[\x01-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+    
     text = re.split(r"\bReferences\b", text, flags=re.IGNORECASE)[0]
     text = re.sub(r"Correspondence should be addressed.*", "", text)
     text = re.sub(r"Received .* Accepted .* Published .*", "", text)
