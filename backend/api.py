@@ -114,6 +114,41 @@ async def get_admin_dashboard_data(user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail="Failed to load admin stats.")
 
 
+# ── DELETE /api/admin/users/{uid} ────────────────────────────
+@app.delete("/api/admin/users/{uid}")
+async def delete_user_endpoint(uid: str, user: dict = Depends(get_current_user)):
+    admin_email = os.getenv("ADMIN_EMAIL", "aryankale1410@gmail.com")
+    if user.get("email") != admin_email:
+        raise HTTPException(status_code=403, detail="Forbidden: You do not have admin access.")
+    
+    try:
+        # Delete from Firebase Auth
+        from firebase_admin import auth as firebase_auth
+        try:
+            firebase_auth.delete_user(uid)
+        except firebase_auth.UserNotFoundError:
+            pass # Ignore if already deleted from Firebase
+            
+        # Clear storage files associated with user
+        try:
+            from firebase_admin import storage
+            bucket = storage.bucket()
+            blobs = bucket.list_blobs(prefix=f"users/{uid}/papers/")
+            for blob in blobs:
+                blob.delete()
+        except Exception as e:
+            print(f"Warning: Failed to clear Firebase files for {uid}: {e}")
+
+        # Delete from DB (cascades)
+        from database import delete_user_db
+        delete_user_db(uid)
+        
+        return {"status": "success", "message": f"User {uid} deleted successfully."}
+    except Exception as e:
+        print(f"[Admin Error] {e}", file=sys.stderr)
+        raise HTTPException(status_code=500, detail=f"Failed to delete user: {str(e)}")
+
+
 # ── GET /api/papers ──────────────────────────────────────────
 @app.get("/api/papers")
 async def list_papers(user: dict = Depends(get_current_user)):
@@ -209,6 +244,17 @@ async def get_graph(user: dict = Depends(get_current_user)):
 @app.get("/api/history")
 async def get_history_endpoint(user: dict = Depends(get_current_user)):
     return {"history": get_history(user["uid"])}
+
+
+# ── DELETE /api/history/{history_id} ─────────────────────────
+@app.delete("/api/history/{history_id}")
+async def delete_history_endpoint(history_id: int, user: dict = Depends(get_current_user)):
+    from database import delete_history_item
+    try:
+        delete_history_item(user["uid"], history_id)
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ── POST /api/reset ──────────────────────────────────────────
