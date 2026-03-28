@@ -7,6 +7,7 @@ import {
     GoogleAuthProvider,
     signOut,
     updateProfile,
+    sendEmailVerification
 } from 'firebase/auth'
 import { auth } from '../firebase'
 
@@ -30,15 +31,28 @@ export function AuthProvider({ children }) {
         return unsubscribe
     }, [])
 
-    const login = (email, password) =>
-        signInWithEmailAndPassword(auth, email, password)
+    const login = async (email, password) => {
+        const cred = await signInWithEmailAndPassword(auth, email, password)
+        if (!cred.user.emailVerified) {
+            await signOut(auth)
+            const err = new Error('Please verify your email address to log in.')
+            err.code = 'auth/unverified-email'
+            throw err
+        }
+        return cred
+    }
 
     const signup = async (email, password, displayName) => {
         const cred = await createUserWithEmailAndPassword(auth, email, password)
         if (displayName) {
             await updateProfile(cred.user, { displayName })
         }
-        return cred
+        await sendEmailVerification(cred.user)
+        await signOut(auth)
+
+        const err = new Error('Signup successful! Please check your email to verify your account before logging in.')
+        err.code = 'auth/signup-success-unverified'
+        throw err
     }
 
     const loginWithGoogle = () =>
