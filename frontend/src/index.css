@@ -1455,6 +1455,16 @@ body::before {
   margin-bottom: 2px;
 }
 
+.sidebar-history-item .history-menu-btn {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.sidebar-history-item:hover .history-menu-btn,
+.sidebar-history-item:focus-within .history-menu-btn {
+  opacity: 1;
+}
+
 .sidebar-history-item:hover {
   background: rgba(255, 255, 255, 0.04);
 }
