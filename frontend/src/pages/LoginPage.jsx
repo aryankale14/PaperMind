@@ -9,6 +9,12 @@ export default function LoginPage() {
 
     useEffect(() => {
         if (user) {
+            const isPasswordAuth = user.providerData?.some(p => p.providerId === 'password');
+            if (isPasswordAuth && !user.emailVerified) {
+                // Do NOT redirect unverified users. 
+                // Let the login/signup function finish signing them out and throw the error.
+                return;
+            }
             navigate('/app')
         }
     }, [user, navigate])
