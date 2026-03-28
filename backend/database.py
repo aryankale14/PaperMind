@@ -138,12 +138,19 @@ def upsert_user(user_id, email, display_name):
             """, (user_id, email, display_name))
 
 
+def delete_user_db(user_id):
+    """Delete a user and all their cascaded data from the database."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
+
+
 # ── History Operations ───────────────────────────────────────
 def get_history(user_id):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT question, answer, mode, plan, sources, created_at
+                SELECT id, question, answer, mode, plan, sources, created_at
                 FROM research_history
                 WHERE user_id = %s
                 ORDER BY created_at ASC
@@ -151,11 +158,12 @@ def get_history(user_id):
             rows = cur.fetchall()
             return [
                 {
-                    "question": r[0],
-                    "answer": r[1],
-                    "mode": r[2],
-                    "plan": r[3],
-                    "sources": r[4],
+                    "id": r[0],
+                    "question": r[1],
+                    "answer": r[2],
+                    "mode": r[3],
+                    "plan": r[4],
+                    "sources": r[5],
                 }
                 for r in rows
             ]
@@ -173,6 +181,14 @@ def add_history(user_id, question, answer, mode, plan, sources):
                 json.dumps(plan) if plan else None,
                 json.dumps(sources) if sources else None,
             ))
+
+def delete_history_item(user_id, history_id):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                DELETE FROM research_history 
+                WHERE id = %s AND user_id = %s
+            """, (history_id, user_id))
 
 
 def check_daily_limit(user_id, limit=5):
