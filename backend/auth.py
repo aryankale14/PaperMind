@@ -57,6 +57,12 @@ async def get_current_user(request: Request) -> dict:
         # to ensure foreign key constraints (like research_history) don't fail
         upsert_user(uid, email, name)
 
+        email_verified = decoded.get("email_verified", False)
+        
+        # If the user signs in with an unverified email, block API access
+        if not email_verified:
+            raise HTTPException(status_code=403, detail="Email is not verified")
+
         return {
             "uid": uid,
             "email": email,
