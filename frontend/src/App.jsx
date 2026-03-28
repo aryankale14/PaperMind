@@ -41,6 +41,25 @@ function ProtectedApp() {
         setActiveHistoryIndex(null)
     }, [])
 
+    const deleteHistoryItem = useCallback(async (historyId) => {
+        try {
+            const token = await getToken()
+            const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+            const res = await fetch(`${API_BASE_URL}/api/history/${historyId}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+            })
+            if (res.ok) {
+                setHistory(prev => prev.filter(h => h.id !== historyId))
+                if (result && result.id === historyId) {
+                    setResult(null)
+                }
+            }
+        } catch (err) {
+            console.error('Failed to delete history item:', err)
+        }
+    }, [getToken, result])
+
     const handleHistoryClick = useCallback((entry, index) => {
         setResult({
             answer: entry.answer,
@@ -93,6 +112,7 @@ function ProtectedApp() {
                     activeHistoryIndex={activeHistoryIndex}
                     onHistoryClick={handleHistoryClick}
                     onCloseMobile={() => setIsMobileMenuOpen(false)}
+                    onDeleteHistory={deleteHistoryItem}
                 />
             </div>
 
