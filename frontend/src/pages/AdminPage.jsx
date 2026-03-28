@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { Shield, ChevronDown, ChevronRight, FileText, Search, Clock, Users } from 'lucide-react'
+import { Shield, ChevronDown, ChevronRight, FileText, Search, Clock, Users, Trash2 } from 'lucide-react'
 
 export default function AdminPage() {
     const { getToken, user } = useAuth()
@@ -8,6 +8,7 @@ export default function AdminPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
     const [expandedUser, setExpandedUser] = useState(null)
+    const [isDeleting, setIsDeleting] = useState(false)
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -33,6 +34,38 @@ export default function AdminPage() {
 
         fetchStats()
     }, [getToken])
+
+    const handleDeleteUser = async (e, userId) => {
+        e.stopPropagation(); // prevent row expansion
+        if (!window.confirm("Are you sure you want to delete this user and all their data? This action cannot be undone.")) {
+            return;
+        }
+
+        setIsDeleting(true);
+        try {
+            const token = await getToken();
+            const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+            const res = await fetch(`${API_BASE_URL}/api/admin/users/${userId}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.detail || 'Failed to delete user.');
+            }
+
+            // Remove user from stats
+            setStats(prev => prev.filter(u => u.id !== userId));
+            if (expandedUser === userId) {
+                setExpandedUser(null);
+            }
+        } catch (err) {
+            alert(`Error: ${err.message}`);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -103,6 +136,7 @@ export default function AdminPage() {
                             <th>Joined Date</th>
                             <th>Papers</th>
                             <th>Queries</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -119,20 +153,31 @@ export default function AdminPage() {
                                         <td className="admin-expander">
                                             {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                                         </td>
-                                        <td className="admin-cell-main">{u.display_name}</td>
-                                        <td className="admin-cell-muted">{u.email}</td>
-                                        <td className="admin-cell-muted">{date}</td>
-                                        <td>
+                                        <td className="admin-cell-main" data-label="User Name">{u.display_name}</td>
+                                        <td className="admin-cell-muted" data-label="Email">{u.email}</td>
+                                        <td className="admin-cell-muted" data-label="Joined Date">{date}</td>
+                                        <td data-label="Papers">
                                             <span className="admin-badge">{u.papers.length}</span>
                                         </td>
-                                        <td>
+                                        <td data-label="Queries">
                                             <span className="admin-badge accent">{u.queries.length}</span>
+                                        </td>
+                                        <td data-label="Actions">
+                                            <button 
+                                                className="admin-delete-btn" 
+                                                title="Delete User"
+                                                onClick={(e) => handleDeleteUser(e, u.id)}
+                                                disabled={isDeleting}
+                                                style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '4px' }}
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
                                         </td>
                                     </tr>
 
                                     {isExpanded && (
                                         <tr className="admin-details-row">
-                                            <td colSpan={6}>
+                                            <td colSpan={7}>
                                                 <div className="admin-details-content">
 
                                                     <div className="admin-details-section">
