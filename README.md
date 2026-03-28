@@ -191,4 +191,4 @@ To run PaperMind locally, you will need to set up both the FastAPI backend and t
    ```bash
    npm run dev
    ```
-```
+
