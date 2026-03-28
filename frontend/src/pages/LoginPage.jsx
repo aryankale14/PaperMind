@@ -27,6 +27,12 @@ export default function LoginPage() {
 
         try {
             if (isSignup) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    setError('Invalid email format. Please enter a valid email address.');
+                    setLoading(false);
+                    return;
+                }
                 await signup(email, password, name)
             } else {
                 await login(email, password)
@@ -40,6 +46,14 @@ export default function LoginPage() {
                 setError('An account with this email already exists')
             } else if (code === 'auth/weak-password') {
                 setError('Password must be at least 6 characters')
+            } else if (code === 'auth/invalid-email') {
+                setError('Invalid email format. Please enter a valid email address.')
+            } else if (code === 'auth/unverified-email') {
+                setError('Please verify your email address to log in. Check your inbox (and spam folder).')
+            } else if (code === 'auth/signup-success-unverified') {
+                // This is our custom success message thrown from signup
+                setError(err.message)
+                setIsSignup(false) // Switch to login tab so they can log in after verifying
             } else {
                 setError(err.message || 'Authentication failed')
             }
