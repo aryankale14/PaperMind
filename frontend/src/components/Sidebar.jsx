@@ -1,14 +1,27 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Search, FileText, Share2, Brain, Clock, LogOut, Shield } from 'lucide-react'
-import { useState } from 'react'
+import { Search, FileText, Share2, Brain, Clock, LogOut, Shield, MoreVertical, Trash2 } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 
 const ADMIN_EMAIL = "aryankale1410@gmail.com"
 
-export default function Sidebar({ history = [], activeHistoryIndex, onHistoryClick, onCloseMobile }) {
+export default function Sidebar({ history = [], activeHistoryIndex, onHistoryClick, onCloseMobile, onDeleteHistory }) {
     const [historySearch, setHistorySearch] = useState('')
+    const [menuOpenId, setMenuOpenId] = useState(null)
     const { user, logout } = useAuth()
     const navigate = useNavigate()
+    const menuRef = useRef(null)
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (menuRef.current && !menuRef.current.contains(event.target)) {
+                setMenuOpenId(null)
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside)
+        return () => document.removeEventListener("mousedown", handleClickOutside)
+    }, [])
 
     const filteredHistory = history.filter((h) =>
         h.question.toLowerCase().includes(historySearch.toLowerCase())
@@ -90,8 +103,67 @@ export default function Sidebar({ history = [], activeHistoryIndex, onHistoryCli
                                     className={`sidebar-history-item ${activeHistoryIndex === realIndex ? 'active' : ''}`}
                                     onClick={() => handleEntryClick(entry, realIndex)}
                                     title={entry.question}
+                                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}
                                 >
-                                    <span className="sidebar-history-text">{entry.question}</span>
+                                    <span className="sidebar-history-text" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {entry.question}
+                                    </span>
+                                    <button
+                                        className="history-menu-btn"
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            setMenuOpenId(menuOpenId === entry.id ? null : entry.id)
+                                        }}
+                                        style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
+                                    >
+                                        <MoreVertical size={14} />
+                                    </button>
+
+                                    {menuOpenId === entry.id && (
+                                        <div
+                                            ref={menuRef}
+                                            style={{
+                                                position: 'absolute',
+                                                right: '24px',
+                                                top: '100%',
+                                                background: 'var(--bg-secondary)',
+                                                border: '1px solid var(--border)',
+                                                borderRadius: '6px',
+                                                padding: '4px',
+                                                zIndex: 100,
+                                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                                            }}
+                                        >
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    if (window.confirm("Delete this research query from history?")) {
+                                                        onDeleteHistory(entry.id)
+                                                    }
+                                                    setMenuOpenId(null)
+                                                }}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px',
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    color: 'var(--danger)',
+                                                    cursor: 'pointer',
+                                                    padding: '8px 12px',
+                                                    width: '100%',
+                                                    textAlign: 'left',
+                                                    fontSize: '0.85rem',
+                                                    borderRadius: '4px'
+                                                }}
+                                                onMouseEnter={(e) => e.target.style.background = 'rgba(239, 68, 68, 0.1)'}
+                                                onMouseLeave={(e) => e.target.style.background = 'none'}
+                                            >
+                                                <Trash2 size={12} />
+                                                Delete
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             )
                         })
